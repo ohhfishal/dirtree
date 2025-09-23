@@ -1,0 +1,4 @@
+inputs:
+  nixpkgs-unstable:
+    url: github:nixos/nixpkgs/nixpkgs-unstable
+backend: nix

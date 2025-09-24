@@ -10,11 +10,16 @@ import (
 	"strings"
 )
 
+type PrintOptions struct {
+	// DirOnly bool `short:"d" help:"Only show directories."`
+	ColorMode string `short:"C" enum:"auto,never,always" default:"auto" help:"When to use colors (auto,always,never)." env:"DIRTREE_COLOR_MODE"`
+}
+
 type CMD struct {
-	Path      string   `arg:"" optional:"" type:"path" help:"Path to use as the tree root."`
-	Depth     int      `short:"D" default:"2" help:"Max depth to recurse."`
-	FileMode  FileMode `short:"F" enum:"git,file,auto" default:"auto" help:"How to discover files (git,file,auto)." env:"FILE_MODE"`
-	ColorMode string   `short:"C" enum:"auto,never,always" default:"auto" help:"When to use colors (auto,always,never)." env:"COLOR_MODE"`
+	Path         string       `arg:"" optional:"" type:"path" help:"Path to use as the tree root."`
+	Depth        int          `short:"D" default:"2" help:"Max depth to recurse."`
+	FileMode     FileMode     `short:"F" enum:"git,file,auto" default:"auto" help:"How to discover files (git,file,auto)." env:"DIRTREE_FILE_MODE"`
+	PrintOptions PrintOptions `embed:"" group:"Output Options"`
 }
 
 func (cmd *CMD) Run(_ context.Context) error {
@@ -44,7 +49,7 @@ func (cmd *CMD) Run(_ context.Context) error {
 	}
 
 	var colors Colors
-	switch cmd.ColorMode {
+	switch cmd.PrintOptions.ColorMode {
 	case "auto":
 		colors = ColorsAuto(os.Stdout, os.Getenv)
 	case "always":
@@ -52,7 +57,7 @@ func (cmd *CMD) Run(_ context.Context) error {
 	case "never":
 		colors = Colors{}
 	default:
-		return fmt.Errorf("unknown color mode: %s", cmd.ColorMode)
+		return fmt.Errorf("unknown color mode: %s", cmd.PrintOptions.ColorMode)
 	}
 
 	// TODO: Print a message like:

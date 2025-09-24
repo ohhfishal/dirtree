@@ -49,25 +49,20 @@ func (tree TreeNode) print(stdout io.Writer, prefix string, depth int) error {
 			fmt.Fprintln(stdout, ".")
 		}
 
-		if depth == 0 {
-			prefix = "├── "
-		} else {
-			// This introduces a bug somehow
-			// We only want to add the bar if we know there is a child under us
-			prefix = "    " + prefix
-			prefix = "│" + prefix[1:]
-		}
+		prefix = strings.Replace(prefix, "├──", "│  ", 1)
+		prefix = strings.Replace(prefix, "└──", "   ", 1)
+
+		childPrefix := prefix + "├── "
+		orphanPrefix := prefix + "└── "
 
 		i := 0
 		for _, child := range tree.Children {
-			i++
-			if i == len(tree.Children) {
-				prefix = strings.ReplaceAll(prefix, "├", "└")
+			if i == len(tree.Children)-1 {
+				child.print(stdout, orphanPrefix, depth+1)
 			} else {
-				prefix = strings.ReplaceAll(prefix, "└", "├")
+				child.print(stdout, childPrefix, depth+1)
 			}
-			child.print(stdout, prefix, depth+1)
-
+			i++
 		}
 	} else {
 		fmt.Fprintln(stdout, tree.Metadata.Name())

@@ -10,11 +10,6 @@ import (
 	"syscall"
 )
 
-type CLI struct {
-	Path  string `arg:"" optional:"" type:"path" help:"Path to tree from."`
-	Depth int    `default:"2" help:"Max depth to recurse."`
-}
-
 func main() {
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
@@ -23,7 +18,7 @@ func main() {
 	)
 	defer stop()
 
-	var cli CLI
+	var cli tree.CMD
 	kongCtx := kong.Parse(
 		&cli,
 		kong.BindTo(ctx, new(context.Context)),
@@ -33,11 +28,4 @@ func main() {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-}
-
-func (cmd *CLI) Run() error {
-	if cmd.Path == "" {
-		cmd.Path = "."
-	}
-	return tree.Print(cmd.Path, "", 0, cmd.Depth)
 }

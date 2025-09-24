@@ -1,37 +1,59 @@
 package tree
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
 type CMD struct {
-	Path  string `arg:"" optional:"" type:"path" help:"Path to tree from."`
-	Depth int    `default:"2" help:"Max depth to recurse."`
+	Path     string   `arg:"" optional:"" type:"path" help:"Path to tree from."`
+	Depth    int      `short:"D" default:"2" help:"Max depth to recurse."`
+	FileMode FileMode `short:"F" enum:"git,file,auto" default:"auto" help:"How to discover files (git, file, auto)."`
 }
 
-func (cmd *CMD) Run() error {
+func (cmd *CMD) Run(_ context.Context) error {
 	if cmd.Path == "" {
 		cmd.Path = "."
 	}
 
-	tree, err := findGitFiles(cmd.Path, cmd.Depth)
-	if err != nil {
-		return fmt.Errorf("finding files: %w", err)
+	if cmd.FileMode == FileModeAutomatic {
+		// TODO: Actually check which to use
+		cmd.FileMode = InferFileMode(cmd.Path)
 	}
+
+	var tree *TreeNode
+	var err error
+	switch cmd.FileMode {
+	case FileModeGit:
+		tree, err = findGitFiles(cmd.Path, cmd.Depth)
+		if err != nil {
+			return fmt.Errorf("finding files: %w", err)
+		}
+	case FileModeFile:
+		tree, err = findAllFiles(cmd.Path, cmd.Depth)
+		if err != nil {
+			return fmt.Errorf("finding files: %w", err)
+		}
+	default:
+		return fmt.Errorf("unknown file mode: %s", cmd.FileMode)
+	}
+
+	// TODO: Print a message like:
+	// "%d directories, %d files"
 	return tree.Print(os.Stdout)
 }
 
 type TreeNode struct {
-	Name     string
-	Depth    int
-	Children map[string]*TreeNode
-	Metadata fs.FileInfo
+	Name         string
+	Depth        int
+	OmitChildren bool
+	Children     map[string]*TreeNode
+	Metadata     fs.FileInfo
 }
 
 func (tree TreeNode) Print(stdout io.Writer) error {
@@ -55,6 +77,11 @@ func (tree TreeNode) print(stdout io.Writer, prefix string, depth int) error {
 		childPrefix := prefix + "├── "
 		orphanPrefix := prefix + "└── "
 
+		if tree.OmitChildren {
+			fmt.Fprintln(stdout, orphanPrefix+"...")
+			return nil
+		}
+
 		i := 0
 		for _, child := range tree.Children {
 			if i == len(tree.Children)-1 {
@@ -71,10 +98,6 @@ func (tree TreeNode) print(stdout io.Writer, prefix string, depth int) error {
 }
 
 func (tree *TreeNode) AddChild(start string, path string) error {
-	if tree.Depth <= 0 {
-		return fmt.Errorf("can not add child to: %s", tree.Name)
-	}
-
 	metadata, err := os.Lstat(filepath.Join(start, path))
 	if err != nil {
 		return fmt.Errorf("getting status for %s: %w", path, err)
@@ -85,6 +108,12 @@ func (tree *TreeNode) AddChild(start string, path string) error {
 }
 
 func (tree *TreeNode) addChild(parent string, paths []string, metadata fs.FileInfo) error {
+	// TODO: Have this instead append ...
+	if tree.Depth <= 0 {
+		tree.OmitChildren = true
+		return nil
+	}
+
 	if len(paths) == 0 {
 		// Base case nothing to do
 		return nil
@@ -119,88 +148,5 @@ func (tree *TreeNode) addChild(parent string, paths []string, metadata fs.FileIn
 		}
 		tree.Children[paths[0]] = &child
 	}
-	return nil
-}
-
-func findGitFiles(path string, maxDepth int) (*TreeNode, error) {
-	metadata, err := os.Lstat(path)
-	if err != nil {
-		return nil, fmt.Errorf("getting status root %s: %w", path, err)
-	}
-
-	cmd := exec.Command("git", "-C", path, "ls-files", "-o", "-c", "--exclude-standard")
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("running git command: %w", err)
-	}
-	lines := strings.Split(string(output), "\n")
-
-	tree := TreeNode{
-		Name:     metadata.Name(),
-		Metadata: metadata,
-		Depth:    maxDepth,
-		Children: map[string]*TreeNode{},
-	}
-	for _, line := range lines {
-		if len(line) == 0 {
-			continue
-		}
-		if err := tree.AddChild(path, line); err != nil {
-			return nil, fmt.Errorf("navigating tree: %w", err)
-		}
-	}
-	return &tree, nil
-}
-
-func PrintAll(path string, prefix string, depth int, maxDepth int) error {
-	if depth > maxDepth {
-		panic("High depth not supported yet")
-	}
-
-	file, err := os.Stat(path)
-	if err != nil {
-		return fmt.Errorf("getting stat for: %s: %w", path, err)
-	}
-
-	if file.Mode()&fs.ModeSymlink != 0 {
-		return fmt.Errorf("symlink is not supported: %s", file.Name())
-	}
-
-	if file.IsDir() {
-		if path != "." {
-			fmt.Println(prefix + file.Name() + "/")
-		} else {
-			fmt.Println(prefix + ".")
-		}
-		if depth == 0 {
-			prefix = "├── "
-		} else {
-			prefix = "    " + prefix
-			prefix = "│" + prefix[1:]
-		}
-
-		entries, err := os.ReadDir(path)
-		if err != nil {
-			return fmt.Errorf("getting files: %w", err)
-		}
-
-		for i, entry := range entries {
-			if i == len(entries)-1 {
-				prefix = strings.ReplaceAll(prefix, "├", "└")
-			} else {
-				prefix = strings.ReplaceAll(prefix, "└", "├")
-			}
-
-			PrintAll(
-				filepath.Join(path, entry.Name()),
-				prefix,
-				depth+1,
-				maxDepth,
-			)
-		}
-	} else {
-		fmt.Println(prefix + file.Name())
-	}
-
 	return nil
 }

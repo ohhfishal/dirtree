@@ -122,7 +122,6 @@ func (tree *TreeNode) AddChild(start string, path string) error {
 }
 
 func (tree *TreeNode) addChild(parent string, paths []string, metadata fs.FileInfo) error {
-	// TODO: Have this instead append ...
 	if tree.Depth <= 0 {
 		tree.OmitChildren = true
 		return nil

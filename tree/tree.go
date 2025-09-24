@@ -13,7 +13,7 @@ import (
 type CMD struct {
 	Path      string   `arg:"" optional:"" type:"path" help:"Path to use as the tree root."`
 	Depth     int      `short:"D" default:"2" help:"Max depth to recurse."`
-	FileMode  FileMode `short:"F" enum:"git,file,auto" default:"auto" help:"How to discover files (git, file, auto)." env:"FILE_MODE"`
+	FileMode  FileMode `short:"F" enum:"git,file,auto" default:"auto" help:"How to discover files (git,file,auto)." env:"FILE_MODE"`
 	ColorMode string   `short:"C" enum:"auto,never,always" default:"auto" help:"When to use colors (auto,always,never)." env:"COLOR_MODE"`
 }
 

@@ -11,9 +11,10 @@ import (
 )
 
 type CMD struct {
-	Path     string   `arg:"" optional:"" type:"path" help:"Path to tree from."`
-	Depth    int      `short:"D" default:"2" help:"Max depth to recurse."`
-	FileMode FileMode `short:"F" enum:"git,file,auto" default:"auto" help:"How to discover files (git, file, auto)."`
+	Path      string   `arg:"" optional:"" type:"path" help:"Path to tree from."`
+	Depth     int      `short:"D" default:"2" help:"Max depth to recurse."`
+	FileMode  FileMode `short:"F" enum:"git,file,auto" default:"auto" help:"How to discover files (git, file, auto)."`
+	ColorMode string   `short:"c" enum:"auto,never,always" default:"auto" help:"How to use colors"`
 }
 
 func (cmd *CMD) Run(_ context.Context) error {
@@ -43,9 +44,21 @@ func (cmd *CMD) Run(_ context.Context) error {
 		return fmt.Errorf("unknown file mode: %s", cmd.FileMode)
 	}
 
+	var colors Colors
+	switch cmd.ColorMode {
+	case "auto":
+		colors = ColorsAuto(os.Stdout, os.Getenv)
+	case "always":
+		colors = ColorsAlways(os.Getenv)
+	case "never":
+		colors = Colors{}
+	default:
+		return fmt.Errorf("unknown color mode: %s", cmd.ColorMode)
+	}
+
 	// TODO: Print a message like:
 	// "%d directories, %d files"
-	return tree.Print(os.Stdout)
+	return tree.Print(os.Stdout, colors)
 }
 
 type TreeNode struct {
@@ -56,16 +69,17 @@ type TreeNode struct {
 	Metadata     fs.FileInfo
 }
 
-func (tree TreeNode) Print(stdout io.Writer) error {
-	return tree.print(stdout, "", 0)
+func (tree TreeNode) Print(stdout io.Writer, colors Colors) error {
+	// TODO: Make colors optional
+	return tree.print(stdout, colors, "", 0)
 }
 
-func (tree TreeNode) print(stdout io.Writer, prefix string, depth int) error {
+func (tree TreeNode) print(stdout io.Writer, colors Colors, prefix string, depth int) error {
 	// TODO: Buffer this
 	fmt.Fprint(stdout, prefix)
 	if tree.Metadata.IsDir() {
 		if tree.Name != "." {
-			fmt.Fprint(stdout, tree.Name)
+			fmt.Fprint(stdout, colors.Format(tree.Name, tree.Metadata))
 			fmt.Fprintln(stdout, "/")
 		} else {
 			fmt.Fprintln(stdout, ".")
@@ -85,14 +99,15 @@ func (tree TreeNode) print(stdout io.Writer, prefix string, depth int) error {
 		i := 0
 		for _, child := range tree.Children {
 			if i == len(tree.Children)-1 {
-				child.print(stdout, orphanPrefix, depth+1)
+				child.print(stdout, colors, orphanPrefix, depth+1)
 			} else {
-				child.print(stdout, childPrefix, depth+1)
+				child.print(stdout, colors, childPrefix, depth+1)
 			}
 			i++
 		}
 	} else {
-		fmt.Fprintln(stdout, tree.Metadata.Name())
+
+		fmt.Fprintln(stdout, colors.Format(tree.Name, tree.Metadata))
 	}
 	return nil
 }

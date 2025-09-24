@@ -22,6 +22,9 @@ func main() {
 	kongCtx := kong.Parse(
 		&cli,
 		kong.BindTo(ctx, new(context.Context)),
+		kong.Vars{
+			"env_prefix": "DIRTREE_",
+		},
 	)
 
 	if err := kongCtx.Run(); err != nil {

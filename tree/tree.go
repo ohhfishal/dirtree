@@ -12,13 +12,13 @@ import (
 
 type PrintOptions struct {
 	// DirOnly bool `short:"d" help:"Only show directories."`
-	ColorMode string `short:"C" enum:"auto,never,always" default:"auto" help:"When to use colors (auto,always,never)." env:"DIRTREE_COLOR_MODE"`
+	ColorMode string `short:"C" enum:"auto,never,always" default:"auto" help:"When to use colors (${enum})." env:"${env_prefix}COLOR_MODE"`
 }
 
 type CMD struct {
 	Path         string       `arg:"" optional:"" type:"path" help:"Path to use as the tree root."`
-	Depth        int          `short:"D" default:"2" help:"Max depth to recurse."`
-	FileMode     FileMode     `short:"F" enum:"git,file,auto" default:"auto" help:"How to discover files (git,file,auto)." env:"DIRTREE_FILE_MODE"`
+	Depth        int          `short:"D" default:"2" env:"${env_prefix}DEPTH" help:"Max depth to recurse."`
+	FileMode     FileMode     `short:"F" enum:"auto,git,file" default:"auto" help:"How to discover files (${enum})." env:"${env_prefix}FILE_MODE"`
 	PrintOptions PrintOptions `embed:"" group:"Output Options"`
 }
 

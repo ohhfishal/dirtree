@@ -23,7 +23,6 @@ func (cmd *CMD) Run(_ context.Context) error {
 	}
 
 	if cmd.FileMode == FileModeAutomatic {
-		// TODO: Actually check which to use
 		cmd.FileMode = InferFileMode(cmd.Path)
 	}
 

@@ -74,7 +74,7 @@ type TreeNode struct {
 }
 
 func (tree TreeNode) Print(stdout io.Writer, colors Colors) error {
-	// TODO: Make colors optional
+	// TODO: Make colors optional (using variadic)
 	return tree.print(stdout, colors, "", 0)
 }
 

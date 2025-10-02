@@ -11,4 +11,5 @@ Batteries included alternative to `tree`. Uses `git` to only show included files
 - More options (Hide dotfiles, full path)
 - File/Directory metadata
 - NerdFont Icons
+- Open files via an editor (such as [tre](https://github.com/dduan/tre))
 - Tree sitter (Refresh periodically)

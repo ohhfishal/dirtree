@@ -15,6 +15,7 @@ type Stdout interface {
 
 type Colors struct {
 	Directory  string
+	Executable string
 	Link       string
 	Reset      string
 	extensions map[string]string
@@ -66,11 +67,14 @@ func (colors Colors) Format(text string, info os.FileInfo) string {
 		return color + text + colors.Reset
 	}
 
+	mode := info.Mode()
 	switch {
 	// TODO: Do all the other formatting :)
 	case info.IsDir():
 		return colors.Directory + text + colors.Reset
-	case info.Mode()&fs.ModeSymlink != 0:
+	case mode.IsRegular() && (mode&0111 != 0):
+		return colors.Executable + text + colors.Reset
+	case mode&fs.ModeSymlink != 0:
 		return colors.Link + text + colors.Reset
 	default:
 		return text
@@ -136,6 +140,7 @@ func ParseLinuxColors(lsColors string) (*Colors, error) {
 			// Sticky
 		case "ex":
 			// Regular file w/ executeable permmission
+			colors.Executable = fmt.Sprintf(colorFmt, parts[1])
 		case "lc":
 			// Left code?
 		case "rc":

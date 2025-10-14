@@ -75,18 +75,25 @@ type TreeNode struct {
 
 func (tree TreeNode) Print(stdout io.Writer, colors Colors) error {
 	// TODO: Make colors optional (using variadic)
-	return tree.print(stdout, colors, "", 0)
+	dirs, files, err := tree.print(stdout, colors, "", 0)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(stdout, "\n%d directories, %d files\n", dirs, files); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (tree TreeNode) print(stdout io.Writer, colors Colors, prefix string, depth int) error {
+func (tree TreeNode) print(stdout io.Writer, colors Colors, prefix string, depth int) (int, int, error) {
 	// TODO: Buffer this
 	fmt.Fprint(stdout, prefix)
 	if tree.Metadata.IsDir() {
+		fmt.Fprint(stdout, colors.Format(tree.Name, tree.Metadata))
 		if tree.Name != "." {
-			fmt.Fprint(stdout, colors.Format(tree.Name, tree.Metadata))
 			fmt.Fprintln(stdout, "/")
 		} else {
-			fmt.Fprintln(stdout, ".")
+			fmt.Fprintln(stdout, "")
 		}
 
 		prefix = strings.Replace(prefix, "├──", "│  ", 1)
@@ -97,23 +104,32 @@ func (tree TreeNode) print(stdout io.Writer, colors Colors, prefix string, depth
 
 		if tree.OmitChildren {
 			fmt.Fprintln(stdout, orphanPrefix+"...")
-			return nil
+			return 1, 0, nil
 		}
 
+		dirs := 1
+		files := 0
 		i := 0
 		for _, child := range tree.Children {
+			var arg string
 			if i == len(tree.Children)-1 {
-				child.print(stdout, colors, orphanPrefix, depth+1)
+				arg = orphanPrefix
 			} else {
-				child.print(stdout, colors, childPrefix, depth+1)
+				arg = childPrefix
 			}
+			newDirs, newFiles, err := child.print(stdout, colors, arg, depth+1)
+			if err != nil {
+				return dirs, files, err
+			}
+			dirs += newDirs
+			files += newFiles
 			i++
 		}
+		return dirs, files, nil
 	} else {
-
 		fmt.Fprintln(stdout, colors.Format(tree.Name, tree.Metadata))
+		return 0, 1, nil
 	}
-	return nil
 }
 
 func (tree *TreeNode) AddChild(start string, path string) error {

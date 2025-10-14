@@ -33,3 +33,4 @@ go.work.sum
 .devenv*
 .pre-*
 dirtree
+result

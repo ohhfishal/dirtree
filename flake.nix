@@ -1,5 +1,5 @@
 {
-  description = "dirtree build flake";
+  description = "An opinionated rewrite of tree.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -24,7 +24,7 @@
           };
           vendorHash = "sha256-Fx5aHPDPjwe9iomWBJa3yMcuIHx4W2CtHwMg1q62rDI=";
           meta = {
-            description = "Testing";
+            description = "An opinionated rewrite of tree.";
           };
         };
       }
